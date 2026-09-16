@@ -4,7 +4,11 @@ export const CartContext = createContext();
 
 const readStoredCart = () => {
   try {
-    const stored = JSON.parse(localStorage.getItem('aureon_cart') || '[]');
+    const stored = JSON.parse(
+      localStorage.getItem('arham_cart') || 
+      localStorage.getItem('cartItems') || 
+      '[]'
+    );
     return Array.isArray(stored) ? stored.filter(item => item && item.id && Number(item.quantity) > 0) : [];
   } catch {
     return [];
@@ -19,7 +23,7 @@ export const CartProvider = ({ children }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('aureon_cart', JSON.stringify(cart));
+    localStorage.setItem('arham_cart', JSON.stringify(cart));
   }, [cart]);
 
   const addToCart = (product, size = 'M', quantity = 1, selectedImage = null) => {

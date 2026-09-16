@@ -71,7 +71,7 @@ const AdminSections = ({ setAdminAuth }) => {
 
   return (
     <AdminLayout setAdminAuth={setAdminAuth}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div className="admin-header">
         <div>
           <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#111' }}>Homepage Layout</h2>
           <p style={{ color: '#666', marginTop: '4px' }}>Control the visibility, naming, and order of homepage sections.</p>

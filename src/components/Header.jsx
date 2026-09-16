@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, User, Heart, ShoppingBag, Menu, MapPin, Truck, Building, Info } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Search, User, Heart, ShoppingBag, Menu, X, Truck, Building2, Info, LogOut } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
 import { WishlistContext } from '../context/WishlistContext';
 import { UserContext } from '../context/UserContext';
@@ -11,227 +11,122 @@ import MegaMenu from './MegaMenu';
 
 const Header = () => {
   const [searchVal, setSearchVal] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { cartCount, setIsCartOpen } = useContext(CartContext);
-  const { wishlist } = useContext(WishlistContext);
-  const { user, login } = useContext(UserContext);
-  const { addToast } = useContext(ToastContext);
-  const [settings, setSettings] = useState({});
   const [dbCategories, setDbCategories] = useState([]);
   const [dbSubcategories, setDbSubcategories] = useState([]);
   const [dbProducts, setDbProducts] = useState([]);
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const hoverTimeoutRef = useRef(null);
+  const { cartCount, setIsCartOpen } = useContext(CartContext);
+  const { wishlist } = useContext(WishlistContext);
+  const { user, login, logout } = useContext(UserContext);
+  const { addToast } = useContext(ToastContext);
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(sessionStorage.getItem('publicSettings') || '{}');
-      setSettings(stored);
-    } catch{}
-
-    // Fetch dynamic categories
     Promise.all([
       fetch('/api/categories').then(r => r.json()),
       fetch('/api/subcategories').then(r => r.json()),
       fetch('/api/products').then(r => r.json())
-    ]).then(([cats, subs, prods]) => {
+    ]).then(([cats, subs, products]) => {
       setDbCategories(Array.isArray(cats) ? cats : []);
       setDbSubcategories(Array.isArray(subs) ? subs : []);
-      setDbProducts(Array.isArray(prods) ? prods : []);
-    }).catch(err => console.error("Error fetching mega menu data:", err));
+      setDbProducts(Array.isArray(products) ? products : []);
+    }).catch(() => {});
   }, []);
 
-  const handleMouseEnter = (cat) => {
+  const location = useLocation();
+  const navigation = dbCategories.length
+    ? [{ id: 'home', name: 'Home', slug: 'home' }, ...dbCategories.filter(c => c.slug !== 'home')]
+    : [{ id: 'home', name: 'Home', slug: 'home' }, { id: 'kids', name: 'Kids', slug: 'kids' }, { id: 'men', name: 'Men', slug: 'men' }, { id: 'women', name: 'Women', slug: 'women' }];
+  const showMegaMenu = category => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-    const subs = dbSubcategories.filter(s => s.category_id === cat.id);
-    const catProducts = dbProducts.filter(p => {
-       const pCat = p.category?.toLowerCase() || '';
-       const cSlug = cat.slug.toLowerCase();
-       return pCat === cSlug || pCat === cSlug + 's' || pCat + 's' === cSlug;
-    }).slice(0, 4);
-    setHoveredCategory({ ...cat, subcategories: subs, recentProducts: catProducts });
+    const subcategories = dbSubcategories.filter(item => item.category_id === category.id);
+    const recentProducts = dbProducts.filter(item => item.category?.toLowerCase() === category.slug?.toLowerCase()).slice(0, 4);
+    setHoveredCategory({ ...category, subcategories, recentProducts });
   };
-
-  const handleMouseLeave = () => {
-    hoverTimeoutRef.current = setTimeout(() => {
-      setHoveredCategory(null);
-    }, 200);
-  };
-
-  const handleLoginClick = async () => {
-    if (user) {
-      // If already logged in, no-op here since it's a Link
-    } else {
-      const res = await login();
-      if (res.success) {
-        addToast('Successfully signed in!', 'success');
-      } else if (!res.cancelled) {
-        addToast(res.message || 'Login failed', 'error');
-      }
-    }
-  };
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    const query = searchVal.trim();
-    if (!query) return;
-    navigate(`/shop?search=${encodeURIComponent(query)}`);
+  const closeMegaMenu = () => { hoverTimeoutRef.current = setTimeout(() => setHoveredCategory(null), 180); };
+  const submitSearch = event => {
+    event.preventDefault();
+    if (!searchVal.trim()) return;
+    navigate(`/shop?search=${encodeURIComponent(searchVal.trim())}`);
     setSearchVal('');
+    setSearchOpen(false);
+  };
+  const handleProfile = async () => {
+    if (user) return navigate('/profile');
+    const result = await login();
+    if (result?.success) addToast('Successfully signed in!', 'success');
+    else if (!result?.cancelled) addToast(result?.message || 'Login failed', 'error');
+  };
+  const mobileCategories = navigation.map(item => ({ label: item.name.toUpperCase(), href: item.slug === 'home' ? '/' : `/shop?cat=${item.slug}` }));
+
+  const isActive = (item) => {
+    if (item.slug === 'home') return location.pathname === '/';
+    return location.pathname === '/shop' && location.search.includes(`cat=${item.slug}`);
   };
 
-  const mobileCategories = dbCategories.length > 0 
-    ? dbCategories.map(c => ({ label: c.name, href: `/shop?cat=${c.slug}` }))
-    : [
-      { label: 'MEN', href: '/shop?cat=men' },
-      { label: 'WOMEN', href: '/shop?cat=women' },
-      { label: 'KIDS', href: '/shop?cat=kids' },
-      { label: 'ACCESSORIES', href: '/shop?cat=accessories' },
-    ];
-
-  return (
-    <>
-      {/* Announcement bar */}
-      {settings.top_bar_active !== '0' && (
-        <div className="announcement-bar" style={{ display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
-          <span>{settings.top_bar_text || 'NATIONWIDE CASH ON DELIVERY AVAILABLE'}</span>
-        </div>
-      )}
-
-      <header className="header" onMouseLeave={handleMouseLeave}>
-        <div className="container header-inner">
-          
-          {/* Hamburger Menu (Desktop & Mobile) */}
-          <button className="icon-btn" style={{ marginRight: '16px' }} onClick={() => setIsMobileMenuOpen(true)} aria-label="Open menu">
-            <Menu size={24} />
-          </button>
-
-          {/* Logo */}
-          <Link to="/" className="logo-link" style={{ textDecoration: 'none' }}>
-            <Logo color="var(--primary)" size={28} />
-          </Link>
-
-          {/* Nav (Desktop Only) */}
-          <nav className="main-nav desktop-nav">
-            <ul style={{ display: 'flex', gap: '36px', height: '100%', alignItems: 'center' }}>
-              {dbCategories.length > 0 ? (
-                dbCategories.map(c => (
-                  <li 
-                    key={c.id} 
-                    style={{ height: '100%', display: 'flex', alignItems: 'center' }}
-                    onMouseEnter={() => handleMouseEnter(c)}
-                  >
-                    <Link to={`/shop?cat=${c.slug}`} style={{ padding: '24px 0', borderBottom: hoveredCategory?.id === c.id ? '2px solid var(--primary)' : '2px solid transparent' }}>
-                      {c.name}
-                    </Link>
-                  </li>
-                ))
-              ) : (
-                mobileCategories.map(c => (
-                  <li key={c.label}>
-                    <Link to={c.href}>{c.label}</Link>
-                  </li>
-                ))
-              )}
-            </ul>
-          </nav>
-
-          {/* Right: search + icons */}
-          <div className="header-right">
-            <form className="search-box desktop-search" onSubmit={handleSearch} role="search">
-              <Search size={18} strokeWidth={2} color="#aaa" />
-              <input
-                type="text"
-                placeholder="Search"
-                aria-label="Search products"
-                value={searchVal}
-                onChange={e => setSearchVal(e.target.value)}
-              />
-            </form>
-
-            <Link to="/stores" className="header-action-item">
-              <MapPin size={22} strokeWidth={1.5} />
-              <span>Stores</span>
-            </Link>
-
-            <div 
-              className="profile-dropdown-wrap header-action-item"
-              onClick={() => {
-                if (window.innerWidth <= 768) {
-                  if (user) {
-                    navigate('/profile');
-                  } else {
-                    handleLoginClick();
-                  }
-                }
-              }}
-            >
-              {user ? (
-                <>
-                  <User size={22} strokeWidth={1.5} color="#ff3366" />
-                  <span style={{ color: '#ff3366' }}>Profile</span>
-                </>
-              ) : (
-                <>
-                  <User size={22} strokeWidth={1.5} color="#ff3366" />
-                  <span style={{ color: '#ff3366' }}>Profile</span>
-                </>
-              )}
-              
-              <div className="profile-dropdown">
-                <div style={{ padding: '0 24px', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>Welcome</div>
-                {user ? (
-                  <Link to="/profile" className="dropdown-item" style={{ color: '#ff3366', fontWeight: 'bold' }}>
-                    View Profile
-                  </Link>
-                ) : (
-                  <button onClick={handleLoginClick} className="dropdown-item" style={{ background: 'none', border: 'none', width: '100%', cursor: 'pointer', color: '#ff3366', fontWeight: 'bold', fontSize: '14px', textAlign: 'left' }}>
-                    Sign in / Sign up
-                  </button>
-                )}
-                <div className="dropdown-divider"></div>
-                <Link to="/track-order" className="dropdown-item">
-                  <Truck size={16} /> Track Order
-                </Link>
-                <Link to="/corporate" className="dropdown-item">
-                  <Building size={16} /> Corporate Sales
-                </Link>
-                <Link to="/about" className="dropdown-item">
-                  <Info size={16} /> About Us
-                </Link>
-              </div>
-            </div>
-
-            <Link to="/wishlist" className="header-action-item">
-              <Heart size={22} strokeWidth={1.5} />
-              <span>Wishlist</span>
-              {wishlist && wishlist.length > 0 && <span className="cart-badge" style={{ backgroundColor: '#111' }}>{wishlist.length}</span>}
-            </Link>
-
-            <button className="header-action-item" onClick={() => setIsCartOpen(true)}>
-              <ShoppingBag size={22} strokeWidth={1.5} />
-              <span>Bag</span>
-              {cartCount > 0 && <span className="cart-badge" style={{ backgroundColor: '#ff3366' }}>{cartCount}</span>}
+  return <>
+    <header className="arham-header" onMouseLeave={closeMegaMenu}>
+      <div className="arham-header-inner">
+        <button className="arham-menu-button" onClick={() => setIsMobileMenuOpen(true)} aria-label="Open menu"><Menu size={21} /></button>
+        <Link to="/" className="arham-logo-link" aria-label="Arham Clothing home"><Logo size={25} /></Link>
+        <nav className="arham-nav" aria-label="Main navigation">
+          {navigation.map(item => <Link key={item.id} to={item.slug === 'home' ? '/' : `/shop?cat=${item.slug}`} className={isActive(item) ? 'active' : ''} onMouseEnter={() => item.slug !== 'home' ? showMegaMenu(item) : null}>{item.name}</Link>)}
+          <Link to="/about" className={location.pathname === '/about' ? 'active' : ''}>About</Link>
+        </nav>
+        <div className="arham-header-actions">
+          <button className="arham-icon-button" onClick={() => setSearchOpen(open => !open)} aria-label="Search"><Search size={20} /></button>
+          <div className="profile-dropdown-wrap">
+            <button className="arham-icon-button arham-profile-button" onClick={() => { if(user) navigate('/profile'); }} aria-label={user ? 'Your profile' : 'Sign in'}>
+              <User size={20} />
             </button>
+            <div className="profile-dropdown">
+              <div style={{ padding: '0 24px 10px' }}>
+                <p style={{ color: '#ff3366', fontWeight: 'bold', margin: '0 0 8px', fontSize: '14px' }}>Welcome{user ? `, ${user.name?.split(' ')[0]}` : ''}</p>
+                {!user ? (
+                  <button onClick={handleProfile} style={{ color: '#ff3366', fontWeight: 'bold', fontSize: '14px', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>Sign in / Sign up</button>
+                ) : (
+                  <button onClick={() => navigate('/profile')} style={{ color: '#ff3366', fontWeight: 'bold', fontSize: '14px', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>My Account</button>
+                )}
+              </div>
+              <div className="dropdown-divider"></div>
+              <Link to="/track-order" className="dropdown-item">
+                <Truck size={18} />
+                <span>Track Order</span>
+              </Link>
+              <Link to="/corporate-sales" className="dropdown-item">
+                <Building2 size={18} />
+                <span>Corporate Sales</span>
+              </Link>
+              <Link to="/about" className="dropdown-item">
+                <Info size={18} />
+                <span>About Us</span>
+              </Link>
+              {user && (
+                <>
+                  <div className="dropdown-divider"></div>
+                  <button onClick={() => { logout(); navigate('/'); }} className="dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    <LogOut size={18} />
+                    <span>Log Out</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+          <Link to="/wishlist" className="arham-icon-button" aria-label="Wishlist"><Heart size={20} />{wishlist?.length > 0 && <b>{wishlist.length}</b>}</Link>
+          <button className="arham-icon-button" onClick={() => setIsCartOpen(true)} aria-label="Shopping bag"><ShoppingBag size={20} />{cartCount > 0 && <b>{cartCount}</b>}</button>
         </div>
-        
-        {/* Mega Menu Dropdown */}
-        <MegaMenu 
-          category={hoveredCategory} 
-          isVisible={!!hoveredCategory} 
-          onMouseEnter={() => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); }}
-          onMouseLeave={handleMouseLeave}
-        />
-      </header>
-
-      <MobileMenu 
-        isOpen={isMobileMenuOpen} 
-        onClose={() => setIsMobileMenuOpen(false)} 
-        categories={mobileCategories} 
-      />
-    </>
-  );
+      </div>
+      <form className={`arham-search ${searchOpen ? 'is-open' : ''}`} onSubmit={submitSearch} role="search">
+        <Search size={17} /><input autoFocus={searchOpen} value={searchVal} onChange={event => setSearchVal(event.target.value)} placeholder="Search the collection" aria-label="Search products" />
+        <button type="button" onClick={() => setSearchOpen(false)} aria-label="Close search"><X size={18} /></button>
+      </form>
+      <MegaMenu category={hoveredCategory} isVisible={Boolean(hoveredCategory)} onMouseEnter={() => clearTimeout(hoverTimeoutRef.current)} onMouseLeave={closeMegaMenu} />
+    </header>
+    <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} categories={mobileCategories} />
+  </>;
 };
 
 export default Header;

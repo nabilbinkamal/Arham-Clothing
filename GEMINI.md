@@ -2,7 +2,7 @@
 
 ## 1. Mandatory First Step: Read Project Memory
 At the very beginning of **every new conversation**, before taking any action or answering any user request, you **MUST** read the file `PROJECT_MEMORY.md` using the `view_file` tool.
-This file contains the critical context, roadmap, and live server deployment rules for the "AUREON" project. 
+This file contains the critical context, roadmap, and live server deployment rules for the "ARHAM CLOTHING" project. 
 
 Do not proceed with any implementation until you have fully internalized the contents of `PROJECT_MEMORY.md`.
 

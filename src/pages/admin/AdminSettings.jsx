@@ -10,7 +10,7 @@ const AdminSettings = () => {
     favicon_url: '',
     hotline: '+880 9611 707982',
     whatsapp_number: '+880 1410 954642',
-    contact_email: 'fashion.aureon@gmail.com',
+    contact_email: 'support@arhamclothing.com',
     delivery_dhaka: '80',
     delivery_subcity: '100',
     delivery_outside: '130',
@@ -160,7 +160,7 @@ const AdminSettings = () => {
 
   return (
     <AdminLayout setAdminAuth={() => {}}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div className="admin-header">
         <div>
           <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#111' }}>Store Settings</h2>
           <p style={{ color: '#666', marginTop: '4px' }}>Configure your delivery charges and social media connections.</p>
@@ -175,7 +175,7 @@ const AdminSettings = () => {
             <Share2 size={20} /> Brand Assets
           </h3>
           <p style={{ color: '#666', fontSize: '12px', marginBottom: '16px' }}>Provide direct image URLs for your logo and favicon.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          <div className="admin-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
             <div>
               <label style={labelStyle}>Logo URL</label>
               <div style={{ display: 'flex', gap: '8px' }}>
@@ -217,7 +217,7 @@ const AdminSettings = () => {
             <Share2 size={20} /> Contact Information
           </h3>
           <p style={{ color: '#666', fontSize: '12px', marginBottom: '16px' }}>This info will be displayed on the top bar and floating WhatsApp widget.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          <div className="admin-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
             <div>
               <label style={labelStyle}>Hotline</label>
               <input type="text" name="hotline" value={settings.hotline} onChange={handleChange} style={inputStyle} placeholder="+880 9611 707982" />
@@ -228,7 +228,7 @@ const AdminSettings = () => {
             </div>
             <div>
               <label style={labelStyle}>Contact Email</label>
-              <input type="text" name="contact_email" value={settings.contact_email} onChange={handleChange} style={inputStyle} placeholder="fashion.aureon@gmail.com" />
+              <input type="text" name="contact_email" value={settings.contact_email} onChange={handleChange} style={inputStyle} placeholder="support@arhamclothing.com" />
             </div>
           </div>
         </div>
@@ -239,7 +239,7 @@ const AdminSettings = () => {
             <Share2 size={20} /> Customer Care (Footer)
           </h3>
           <p style={{ color: '#666', fontSize: '12px', marginBottom: '16px' }}>This info is displayed in the Footer under Customer Care.</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          <div className="admin-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
             <div>
               <label style={labelStyle}>Support Phone Number</label>
               <input type="text" name="support_phone" value={settings.support_phone} onChange={handleChange} style={inputStyle} placeholder="+8809677666888" />
@@ -260,7 +260,7 @@ const AdminSettings = () => {
           <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: '#111' }}>
             <Truck size={20} /> Delivery Charges
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
+          <div className="admin-grid-3">
             <div>
               <label style={labelStyle}>Inside Dhaka City (৳)</label>
               <input type="number" name="delivery_dhaka" value={settings.delivery_dhaka} onChange={handleChange} style={inputStyle} required />
@@ -283,7 +283,7 @@ const AdminSettings = () => {
           </h3>
           <p style={{ color: '#666', fontSize: '12px', marginBottom: '16px' }}>Leave empty or "#" if you do not have that social account.</p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="admin-grid-2">
             <div>
               <label style={labelStyle}>Facebook URL</label>
               <input type="text" name="social_fb" value={settings.social_fb} onChange={handleChange} style={inputStyle} />
@@ -323,7 +323,7 @@ const AdminSettings = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+          <div className="admin-grid-1" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
             <div>
               <label style={labelStyle}>Meta Pixel ID</label>
               <input type="text" name="meta_pixel_id" value={settings.meta_pixel_id || ''} onChange={handleChange} style={inputStyle} placeholder="e.g. 2125977295008581" />

@@ -1,142 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, BadgeCheck, Leaf, Shirt, Truck } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import HeroBanner from '../components/HeroBanner';
 import CategoryGrid from '../components/CategoryGrid';
-import * as LucideIcons from 'lucide-react';
+
+const sampleProducts = [
+  { id: 'arham-essential-white', title: 'Essential Tee', price: 1350, imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=700&q=85', category: 't-shirts', colors: ['#fff', '#222'] },
+  { id: 'arham-signature-black', title: 'Signature Tee', price: 1450, imageUrl: 'https://images.unsplash.com/photo-1503341504253-dff4815485f1?auto=format&fit=crop&w=700&q=85', category: 't-shirts', colors: ['#222', '#888', '#fff'] },
+  { id: 'arham-classic-olive', title: 'Classic Tee', price: 1350, imageUrl: 'https://images.unsplash.com/photo-1509942774463-acf339cf87d5?auto=format&fit=crop&w=700&q=85', category: 't-shirts', colors: ['#4b5320', '#888', '#222'] },
+  { id: 'arham-raglan', title: 'Raglan Tee', price: 1550, imageUrl: 'https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=700&q=85', category: 't-shirts', colors: ['#0f172a', '#fff'] }
+];
 
 const Home = () => {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(sampleProducts);
   const [features, setFeatures] = useState([]);
-  const [sections, setSections] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch products from backend
-    // In production, Nginx proxies /api to the backend. In dev, Vite proxies it.
-    fetch('/api/products')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else {
-          setProducts([]);
-        }
-      })
-      .catch(err => {
-        console.error('Error fetching products:', err);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-
-    // Fetch active features
-    fetch('/api/features')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setFeatures(data.filter(f => f.is_active));
-        }
-      })
-      .catch(err => console.error(err));
-
-    // Fetch homepage sections
-    fetch('/api/homepage-sections')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setSections(data.filter(s => s.is_active));
-        }
-      })
-      .catch(err => console.error(err));
+    fetch('/api/products').then(response => response.json()).then(data => {
+      if (Array.isArray(data) && data.length) setProducts(data);
+    }).catch(() => {});
+    fetch('/api/features').then(response => response.json()).then(data => {
+      if (Array.isArray(data)) setFeatures(data.filter(feature => feature.is_active));
+    }).catch(() => {});
   }, []);
 
-  const menProducts = products.filter(p => {
-    const cat = p.category?.toLowerCase() || '';
-    return cat === 'men' || cat === 'mens' || cat === 'mens-collection' || (cat.includes('men') && !cat.includes('women'));
-  });
-  const womenProducts = products.filter(p => {
-    const cat = p.category?.toLowerCase() || '';
-    return cat === 'women' || cat === 'womens' || cat === 'womens-collection' || cat.includes('women');
-  });
-  const newArrivals = [...products].sort((a, b) => b.id - a.id).slice(0, 8); // top 8 newest products
+  const newest = [...products].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 4);
+  const featureItems = features.length ? features.slice(0, 4).map(item => ({ title: item.title, description: item.description, icon: BadgeCheck })) : [
+    { title: 'Premium Fabric', description: 'Soft, breathable, long lasting.', icon: Leaf },
+    { title: 'Comfortable Fit', description: 'Made for all-day ease.', icon: Shirt },
+    { title: 'Quality Craftsmanship', description: 'Attention in every stitch.', icon: BadgeCheck },
+    { title: 'Wholesale Available', description: 'For your growing business.', icon: Truck }
+  ];
 
-  const renderSection = (section) => {
-    switch (section.section_key) {
-      case 'new_arrivals':
-        return (
-          <CategoryGrid
-            key={section.id}
-            title={section.title}
-            bannerImage="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-            bannerLink={`/shop?sort=newest&title=${encodeURIComponent(section.title)}`}
-            products={newArrivals}
-            isBento={true}
-          />
-        );
-      case 'mens':
-        return (
-          <CategoryGrid
-            key={section.id}
-            title={section.title}
-            bannerImage="https://images.unsplash.com/photo-1514222134-b57cbb8ce073?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-            bannerLink={`/shop?cat=men&title=${encodeURIComponent(section.title)}`}
-            products={menProducts}
-          />
-        );
-      case 'womens':
-        return (
-          <CategoryGrid
-            key={section.id}
-            title={section.title}
-            bannerImage="https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-            bannerLink={`/shop?cat=women&title=${encodeURIComponent(section.title)}`}
-            products={womenProducts}
-          />
-        );
-      case 'features':
-        if (features.length === 0) return null;
-        return (
-          <section key={section.id} style={{ padding: '60px 20px', background: '#fafafa', borderTop: '1px solid #eee' }}>
-            <h2 style={{ textAlign: 'center', marginBottom: '40px', fontSize: '24px', fontWeight: 'bold' }}>{section.title}</h2>
-            <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '32px', textAlign: 'center' }}>
-              {features.map(f => {
-                const IconComponent = LucideIcons[f.icon] || LucideIcons.Star;
-                return (
-                  <div key={f.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: '#111', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                      <IconComponent size={30} />
-                    </div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '12px' }}>{f.title}</h3>
-                    <p style={{ color: '#666', lineHeight: '1.5', fontSize: '14px' }}>{f.description}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <>
-      <Header cartCount={0} />
-      <main>
-        <HeroBanner />
-
-        {loading ? (
-          <div style={{ padding: '100px', textAlign: 'center' }}>Loading products...</div>
-        ) : (
-          <>
-            {sections.map(section => renderSection(section))}
-          </>
-        )}
-      </main>
-      <Footer />
-    </>
-  );
+  return <>
+    <Header />
+    <main className="arham-home">
+      <HeroBanner />
+      <section className="arham-collection">
+        <div className="arham-collection-intro">
+          <div className="eyebrow">NEW COLLECTION</div>
+          <h2>Volume 01 &mdash;<br />Everyday&nbsp;Essentials</h2>
+          <p>Minimal design. Premium comfort.</p>
+          <Link to="/shop?sort=newest" className="arham-button">SHOP NOW <ArrowRight size={16} /></Link>
+        </div>
+        <div className="arham-products-grid">
+          {(newest.length ? newest : sampleProducts).map(p => (
+            <article key={p.id} className="arham-product-card">
+              <div className="arham-product-image-wrap">
+                <Link to={`/product/${p.slug || p.id}`}>
+                  <img src={p.imageUrl} alt={p.title} loading="lazy" />
+                </Link>
+                <button className="arham-product-wishlist" aria-label="Add to wishlist">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                </button>
+              </div>
+              <div className="arham-product-info">
+                <Link to={`/product/${p.slug || p.id}`} className="arham-product-name">{p.title}</Link>
+                <p className="arham-product-price">৳ {Number(p.price).toLocaleString('en-BD')}</p>
+                <div className="arham-size-picker">
+                  {['S', 'M', 'L', 'XL', 'XXL'].map((size, i) => (
+                    <button key={size} className={i === 1 ? 'selected' : ''}>{size}</button>
+                  ))}
+                </div>
+                <button className="arham-button arham-add-button" style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}>ADD TO CART</button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="arham-story">
+        <div className="arham-story-image arham-story-detail" />
+        <div className="arham-story-copy"><span className="eyebrow">ABOUT ARHAM</span><h2>ARHAM</h2><h3>Less noise. More character.</h3><p>We create timeless everyday pieces built around simplicity, comfort and modern style.</p><Link to="/about" className="arham-outline-button">ABOUT <ArrowRight size={16} /></Link></div>
+        <div className="arham-story-image arham-story-model" />
+      </section>
+      <section className="arham-values"><span className="eyebrow">WHY ARHAM</span><div className="arham-values-grid">{featureItems.map(({ title, description, icon: Icon }) => <div className="arham-value" key={title}><Icon size={27} strokeWidth={1.5} /><h3>{title}</h3><p>{description}</p></div>)}</div></section>
+    </main>
+    <Footer />
+  </>;
 };
 
 export default Home;

@@ -104,24 +104,6 @@ const AdminLayout = ({ children, setAdminAuth }) => {
                     <FileText size={18} /> Policies
                   </Link>
                 </li>
-
-                {/* MARKETING SECTION */}
-                <span style={{ fontSize: '10px', color: '#666', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', margin: '24px 16px 8px', fontWeight: 'bold' }}>Marketing</span>
-                <li>
-                  <Link to="/admin/marketing" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/marketing' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/marketing' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <TrendingUp size={18} /> Campaigns
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/seo" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/seo' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/seo' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <Search size={18} /> SEO Tools
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/messages" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/messages' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/messages' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <Mail size={18} /> Messages
-                  </Link>
-                </li>
               </>
             )}
 
@@ -135,33 +117,8 @@ const AdminLayout = ({ children, setAdminAuth }) => {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/admin/roles" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/roles' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/roles' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <Shield size={18} /> Roles & Permissions
-                  </Link>
-                </li>
-                <li>
                   <Link to="/admin/settings" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/settings' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/settings' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
                     <Settings size={18} /> Settings
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/integrations" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/integrations' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/integrations' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <Layers size={18} /> Integrations
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/audit-logs" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/audit-logs' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/audit-logs' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <ClipboardList size={18} /> Audit Logs
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/traffic-monitor" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/traffic-monitor' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/traffic-monitor' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <ShieldAlert size={18} /> Traffic Monitor
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/cpanel" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/cpanel' ? 'white' : '#ff4d4d', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/cpanel' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <TerminalSquare size={18} /> Developer Tools
                   </Link>
                 </li>
               </>
@@ -392,7 +349,7 @@ const AdminDashboard = ({ setAdminAuth }) => {
 
   return (
     <AdminLayout setAdminAuth={setAdminAuth}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div className="admin-header">
         <div>
           <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#111' }}>Dashboard Overview</h2>
           <p style={{ color: '#666', marginTop: '4px' }}>Welcome back! Here's what's happening with your store.</p>
@@ -436,7 +393,7 @@ const AdminDashboard = ({ setAdminAuth }) => {
           </div>
           
           {/* Main Charts */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+          <div className="admin-grid-2fr-1fr" style={{ display: 'grid', gap: '24px' }}>
             <div style={{ background: 'white', padding: '32px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <h3 style={{ fontSize: '18px', fontWeight: 'bold' }}>Revenue vs Orders (Last 30 Days)</h3>

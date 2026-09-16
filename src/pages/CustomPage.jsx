@@ -35,10 +35,11 @@ const CustomPage = ({ pageKey }) => {
             />
           </>
         ) : (
-          <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-            <h1 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '16px', color: '#111' }}>PAGE UNAVAILABLE</h1>
-            <p style={{ color: '#666', lineHeight: '1.6', marginBottom: '24px' }}>The page you are looking for is currently disabled or does not exist. Please check back later or contact support if you need immediate assistance.</p>
-            <a href="/" style={{ display: 'inline-block', background: '#111', color: 'white', padding: '12px 32px', textDecoration: 'none', fontWeight: '700', borderRadius: '4px' }}>RETURN TO HOMEPAGE</a>
+          <div style={{ textAlign: 'center', maxWidth: '500px', margin: '0 auto', padding: '60px 20px' }}>
+            <span style={{ display: 'block', fontFamily: '"DM Mono", monospace', fontSize: '12px', fontWeight: '500', letterSpacing: '0.28em', marginBottom: '16px' }}>UPDATING SOON</span>
+            <h1 style={{ fontSize: '32px', fontWeight: '600', marginBottom: '20px', fontFamily: '"Playfair Display", serif' }}>Check Back Later</h1>
+            <p style={{ color: '#666', lineHeight: '1.6', fontSize: '15px', marginBottom: '32px' }}>We are currently crafting the content for this page. Please return soon to discover more about Arham Clothing.</p>
+            <a href="/shop" className="arham-button" style={{ textDecoration: 'none', display: 'inline-flex' }}>CONTINUE SHOPPING</a>
           </div>
         )}
       </div>

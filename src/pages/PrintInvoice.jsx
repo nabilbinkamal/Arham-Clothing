@@ -53,12 +53,12 @@ const PrintInvoice = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #111', paddingBottom: '20px', marginBottom: '40px' }}>
         <div>
           {settings.logo_url ? (
-            <img src={settings.logo_url} alt="AUREON" style={{ height: '40px', objectFit: 'contain' }} />
+            <img src={settings.logo_url} alt="ARHAM CLOTHING" style={{ height: '40px', objectFit: 'contain' }} />
           ) : (
-            <h1 style={{ fontSize: '28px', fontWeight: '900', letterSpacing: '2px', margin: 0 }}>AUREON</h1>
+            <h1 style={{ fontSize: '28px', fontWeight: '900', letterSpacing: '2px', margin: 0 }}>ARHAM CLOTHING</h1>
           )}
           <div style={{ marginTop: '12px', fontSize: '13px', color: '#555', lineHeight: '1.6' }}>
-            <p style={{ margin: 0 }}>{settings.contact_email || 'contact@aureonbd.com'}</p>
+            <p style={{ margin: 0 }}>{settings.contact_email || 'contact@arhamclothing.com'}</p>
             <p style={{ margin: 0 }}>{settings.hotline || '+880 9611 707982'}</p>
             <p style={{ margin: 0 }}>Dhaka, Bangladesh</p>
           </div>
@@ -145,8 +145,8 @@ const PrintInvoice = () => {
 
       {/* Footer */}
       <div style={{ marginTop: '80px', paddingTop: '20px', borderTop: '1px solid #eee', textAlign: 'center', fontSize: '12px', color: '#888' }}>
-        <p style={{ margin: '0 0 4px 0', fontWeight: '600', color: '#111' }}>Thank you for shopping with AUREON!</p>
-        <p style={{ margin: 0 }}>If you have any questions about this invoice, please contact us at {settings.contact_email || 'support@aureonbd.com'}.</p>
+        <p style={{ margin: '0 0 4px 0', fontWeight: '600', color: '#111' }}>Thank you for shopping with ARHAM CLOTHING!</p>
+        <p style={{ margin: 0 }}>If you have any questions about this invoice, please contact us at {settings.contact_email || 'support@arhamclothing.com'}.</p>
       </div>
 
       {/* Action Buttons (Hidden in print) */}

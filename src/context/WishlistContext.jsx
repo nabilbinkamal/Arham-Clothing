@@ -7,7 +7,11 @@ export const WishlistProvider = ({ children }) => {
 
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('aureon_wishlist') || '[]');
+      const stored = JSON.parse(
+        localStorage.getItem('arham_wishlist') || 
+        localStorage.getItem('wishlistItems') || 
+        '[]'
+      );
       setWishlist(Array.isArray(stored) ? stored : []);
     } catch (err) {
       console.error('Failed to load wishlist', err);
@@ -24,7 +28,7 @@ export const WishlistProvider = ({ children }) => {
         updated = [...prev, product];
       }
       try {
-        localStorage.setItem('aureon_wishlist', JSON.stringify(updated));
+        localStorage.setItem('arham_wishlist', JSON.stringify(updated));
       } catch (err) {
         console.error('Failed to save wishlist', err);
       }

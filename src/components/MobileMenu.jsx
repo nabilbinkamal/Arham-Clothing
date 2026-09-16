@@ -111,7 +111,7 @@ const MobileMenu = ({ isOpen, onClose, categories }) => {
         </nav>
 
         <div className="mobile-menu-footer">
-          <p>© 2026 AUREON. All rights reserved.</p>
+          <p>© 2026 ARHAM CLOTHING. All rights reserved.</p>
         </div>
       </div>
     </>

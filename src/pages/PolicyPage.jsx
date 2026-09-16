@@ -42,8 +42,9 @@ const PolicyPage = ({ policyKey }) => {
               />
             </>
           ) : (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#d32f2f' }}>
-              Policy not found.
+            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px', fontFamily: '"Playfair Display", serif' }}>Policy Updating</h2>
+              <p style={{ color: '#666', lineHeight: '1.6', fontSize: '15px' }}>We are currently reviewing and updating our policies. Please check back soon.</p>
             </div>
           )}
         </motion.div>

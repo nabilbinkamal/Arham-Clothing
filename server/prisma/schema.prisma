@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Category {
+  id         Int      @id @default(autoincrement())
+  name       String
+  slug       String   @unique
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("categories")
+}
+
+model Subcategory {
+  id         Int      @id @default(autoincrement())
+  categoryId Int      @map("category_id")
+  name       String
+  slug       String   @unique
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("subcategories")
+}
+
+model Product {
+  id             Int      @id @default(autoincrement())
+  title          String
+  price          Decimal
+  oldPrice       Decimal? @map("oldPrice")
+  isSale         Boolean  @default(false)
+  imageUrl       String
+  category       String
+  subcategory    String?
+  slug           String?  @unique
+  stock          Int      @default(0)
+  description    String?
+  sizes          String?  // SQLite doesn't support JSON, so we use String to store serialized JSON
+  gallery        String?  // SQLite doesn't support JSON
+  specifications String?  // SQLite doesn't support JSON
+  sizeChart      String?  @map("size_chart") // SQLite doesn't support JSON
+  tags           String?  @default("")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("products")
+}
+
+model Order {
+  id            Int      @id @default(autoincrement())
+  customerName  String   @map("customer_name")
+  phone         String
+  email         String?
+  city          String?
+  postalCode    String?  @map("postal_code")
+  address       String
+  totalAmount   Decimal  @map("total_amount")
+  itemsJson     String   @map("items_json") // JSON stored as String
+  status        String   @default("Pending")
+  userId        Int?     @map("user_id")
+  trackingId    String?  @map("tracking_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("orders")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  firebaseUid String?  @unique @map("firebase_uid")
+  uid         String?  @unique
+  email       String?
+  name        String?
+  photoUrl    String?  @map("photo_url")
+  role        String?  @default("Customer")
+  phone       String?
+  address     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Feature {
+  id           Int      @id @default(autoincrement())
+  title        String
+  description  String
+  icon         String
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("features")
+}
+
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  type      String
+  message   String
+  linkUrl   String?  @map("link_url")
+  imageUrl  String?  @map("image_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("announcements")
+}
+
+model HeroSlider {
+  id        Int      @id @default(autoincrement())
+  imageUrl  String   @map("image_url")
+  linkUrl   String?  @map("link_url")
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("hero_sliders")
+}
+
+model Visit {
+  id        Int      @id @default(autoincrement())
+  ipAddress String?  @map("ip_address")
+  visitedAt DateTime @default(now()) @map("visited_at")
+
+  @@map("visits")
+}
+
+model HomepageSection {
+  id           Int     @id @default(autoincrement())
+  sectionKey   String  @unique @map("section_key")
+  title        String
+  isActive     Boolean @default(true) @map("is_active")
+  displayOrder Int     @default(0) @map("display_order")
+
+  @@map("homepage_sections")
+}
+
+model Setting {
+  settingKey   String @id @map("setting_key")
+  settingValue String @map("setting_value")
+
+  @@map("settings")
+}
+
+model Policy {
+  policyKey String @id @map("policy_key")
+  title     String
+  content   String
+
+  @@map("policies")
+}
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String?
+  email     String?
+  subject   String?
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("contact_messages")
+}
+
+model Subscriber {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("subscribers")
+}
+
+model Page {
+  pageKey  String  @id @map("page_key")
+  title    String
+  content  String
+  isActive Boolean @default(true) @map("is_active")
+
+  @@map("pages")
+}
+
+model AuditLog {
+  id            Int      @id @default(autoincrement())
+  adminUsername String?  @map("admin_username")
+  actionType    String?  @map("action_type")
+  endpoint      String?
+  ipAddress     String?  @map("ip_address")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+}

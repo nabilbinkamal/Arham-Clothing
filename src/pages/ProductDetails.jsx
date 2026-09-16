@@ -119,14 +119,14 @@ const ProductDetails = () => {
   useEffect(() => {
     if (!product) return;
     const canonical = `${window.location.origin}${productPath(product)}`;
-    document.title = `${product.title} | AUREON`;
+    document.title = `${product.title} | Arham Clothing`;
     let description = document.head.querySelector('meta[name="description"]');
     if (!description) {
       description = document.createElement('meta');
       description.name = 'description';
       document.head.appendChild(description);
     }
-    description.content = String(product.description || `${product.title} from AUREON.`).replace(/<[^>]*>/g, '').slice(0, 160);
+    description.content = String(product.description || `${product.title} from Arham Clothing.`).replace(/<[^>]*>/g, '').slice(0, 160);
     let canonicalTag = document.head.querySelector('link[rel="canonical"]');
     if (!canonicalTag) {
       canonicalTag = document.createElement('link');

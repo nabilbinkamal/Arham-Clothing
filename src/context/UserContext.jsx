@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { auth, provider } from '../firebase';
-import { signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { triggerGoogleLogin } from '../googleAuth';
 
 export const UserContext = createContext();
 
@@ -19,43 +18,27 @@ export const UserProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // If we have a local token, we consider them logged in.
-    // But we should verify with Firebase Auth state to keep the name/photo.
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const storedUser = readStoredUser() || {};
-        setUser({
-          ...storedUser,
-          uid: firebaseUser.uid,
-          name: firebaseUser.displayName,
-          email: firebaseUser.email,
-          photo_url: firebaseUser.photoURL
-        });
-      } else {
-        setUser(null);
-        setUserToken(null);
-        localStorage.removeItem('userToken');
-        localStorage.removeItem('userInfo');
-      }
-      setLoading(false);
-    });
-
-    // Restore user from local storage immediately to prevent flicker
+    // Restore user and token from local storage
     const storedUser = readStoredUser();
-    if (storedUser) setUser(storedUser);
-
-    return () => unsubscribe();
+    const token = localStorage.getItem('userToken');
+    if (storedUser && token) {
+      setUser(storedUser);
+      setUserToken(token);
+    } else {
+      setUser(null);
+      setUserToken(null);
+    }
+    setLoading(false);
   }, []);
 
   const login = async () => {
     try {
-      const result = await signInWithPopup(auth, provider);
-      const idToken = await result.user.getIdToken();
+      const { accessToken } = await triggerGoogleLogin();
 
       const res = await fetch('/api/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken })
+        body: JSON.stringify({ accessToken })
       });
       const data = await res.json();
       
@@ -64,27 +47,26 @@ export const UserProvider = ({ children }) => {
         setUser(data.user);
         localStorage.setItem('userToken', data.token);
         localStorage.setItem('userInfo', JSON.stringify(data.user));
-        return { success: true };
+        return { success: true, user: data.user };
       } else {
-        return { success: false, message: data.message };
+        return { success: false, message: data.message || 'Login failed' };
       }
     } catch (err) {
-      console.error(err);
+      console.error('Google Sign-in Error:', err);
       const errorMsg = err.message || '';
-      if (err.code === 'auth/popup-closed-by-user' || 
-          err.code === 'auth/cancelled-popup-request' ||
-          err.code === 'auth/popup-blocked' ||
-          errorMsg.includes('popup-closed-by-user') || 
-          errorMsg.includes('cancelled-popup-request') ||
-          errorMsg.includes('popup-blocked')) {
+      if (
+        errorMsg.includes('popup_closed') || 
+        errorMsg.includes('user_cancel') || 
+        errorMsg.includes('cancel') ||
+        errorMsg.includes('closed_by_user')
+      ) {
         return { success: false, cancelled: true, message: 'Sign-in cancelled' };
       }
       return { success: false, message: errorMsg || 'Google Sign-in failed.' };
     }
   };
 
-  const logout = async () => {
-    await firebaseSignOut(auth);
+  const logout = () => {
     setUser(null);
     setUserToken(null);
     localStorage.removeItem('userToken');

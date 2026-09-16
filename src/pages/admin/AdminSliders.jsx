@@ -94,14 +94,14 @@ const AdminSliders = ({ setAdminAuth }) => {
 
   return (
     <AdminLayout setAdminAuth={setAdminAuth}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+      <div className="admin-header">
         <div>
           <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#111' }}>Hero Sliders</h2>
           <p style={{ color: '#666', marginTop: '4px' }}>Manage the banner slider images on your home page.</p>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px', alignItems: 'start' }}>
+      <div className="admin-grid-1fr-2fr" style={{ display: "grid", gap: "32px", alignItems: "start" }}>
         {/* Create Slider Form */}
         <div style={{ background: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', border: '1px solid #eaeaea' }}>
           <h3 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>

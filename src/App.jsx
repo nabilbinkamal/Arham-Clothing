@@ -19,13 +19,6 @@ const AdminCustomers = lazy(() => import('./pages/admin/AdminCustomers'));
 const AdminPolicies = lazy(() => import('./pages/admin/AdminPolicies'));
 const AdminPages = lazy(() => import('./pages/admin/AdminPages'));
 const AdminMessages = lazy(() => import('./pages/admin/AdminMessages'));
-const AdminSEO = lazy(() => import('./pages/admin/AdminSEO'));
-const AdminMarketing = lazy(() => import('./pages/admin/AdminMarketing'));
-const AdminTrafficMonitor = lazy(() => import('./pages/admin/AdminTrafficMonitor'));
-const AdminRoles = lazy(() => import('./pages/admin/AdminRoles'));
-const AdminIntegrations = lazy(() => import('./pages/admin/AdminIntegrations'));
-const AdminAuditLogs = lazy(() => import('./pages/admin/AdminAuditLogs'));
-const AdminCPanel = lazy(() => import('./pages/admin/AdminCPanel'));
 import PolicyPage from './pages/PolicyPage';
 import Checkout from './pages/Checkout';
 import UserProfile from './pages/UserProfile';
@@ -79,8 +72,8 @@ const SEOHead = ({ settings }) => {
   const location = useLocation();
 
   useEffect(() => {
-    const seoTitle = settings.seo_title || 'AUREON | Modern Fashion & Lifestyle';
-    const seoDescription = settings.seo_description || 'Discover timeless fashion, premium essentials and modern lifestyle products from AUREON.';
+    const seoTitle = settings.seo_title || 'Arham Clothing | Everyday Essentials';
+    const seoDescription = settings.seo_description || 'Discover refined everyday essentials from Arham Clothing.';
     const configuredCanonical = settings.seo_canonical_url?.replace(/\/$/, '');
     const canonicalUrl = getUsableCanonical(configuredCanonical, `${window.location.origin}${location.pathname}`);
     document.title = seoTitle;
@@ -88,9 +81,9 @@ const SEOHead = ({ settings }) => {
     setMetaTag('robots', settings.seo_robots || 'index,follow');
     setLinkTag('canonical', canonicalUrl);
     setMetaTag('og:url', canonicalUrl, 'property');
-    if (typeof window.fbq === 'function' && window.__aureonPixelPagePath !== location.pathname) {
+    if (typeof window.fbq === 'function' && window.__arhamPixelPagePath !== location.pathname) {
       window.fbq('track', 'PageView');
-      window.__aureonPixelPagePath = location.pathname;
+      window.__arhamPixelPagePath = location.pathname;
     }
   }, [location.pathname, settings]);
 
@@ -103,10 +96,10 @@ function App() {
 
   useEffect(() => {
     // Record visit if not already recorded in this session
-    if (!sessionStorage.getItem('aureon_visit_recorded')) {
+    if (!sessionStorage.getItem('arham_visit_recorded')) {
       fetch('/api/track-visit', { method: 'POST' })
         .then(() => {
-          sessionStorage.setItem('aureon_visit_recorded', 'true');
+          sessionStorage.setItem('arham_visit_recorded', 'true');
         })
         .catch(err => console.error('Failed to log visit', err));
     }
@@ -116,13 +109,13 @@ function App() {
       .then(res => res.json())
       .then(settings => {
         setPublicSettings(settings);
-        const seoTitle = settings.seo_title || 'AUREON | Modern Fashion & Lifestyle';
-        const seoDescription = settings.seo_description || 'Discover timeless fashion, premium essentials and modern lifestyle products from AUREON.';
+        const seoTitle = settings.seo_title || 'Arham Clothing | Everyday Essentials';
+        const seoDescription = settings.seo_description || 'Discover refined everyday essentials from Arham Clothing.';
         const canonicalUrl = getUsableCanonical(settings.seo_canonical_url, window.location.origin + window.location.pathname);
         document.title = seoTitle;
         setMetaTag('description', seoDescription);
         setMetaTag('keywords', settings.seo_keywords);
-        setMetaTag('author', settings.seo_author || 'AUREON');
+        setMetaTag('author', settings.seo_author || 'Arham Clothing');
         setMetaTag('robots', settings.seo_robots || 'index,follow');
         setLinkTag('canonical', canonicalUrl);
         setMetaTag('og:title', settings.seo_og_title || seoTitle, 'property');
@@ -137,10 +130,10 @@ function App() {
         if (settings.gsc_verification_method === 'meta' && settings.gsc_verification_code) {
           setMetaTag('google-site-verification', settings.gsc_verification_code);
         }
-        let structuredData = document.head.querySelector('#aureon-seo-jsonld');
+        let structuredData = document.head.querySelector('#arham-seo-jsonld');
         if (!structuredData) {
           structuredData = document.createElement('script');
-          structuredData.id = 'aureon-seo-jsonld';
+          structuredData.id = 'arham-seo-jsonld';
           structuredData.type = 'application/ld+json';
           document.head.appendChild(structuredData);
         }
@@ -176,7 +169,7 @@ function App() {
             document.head.appendChild(script);
             window.fbq('init', settings.meta_pixel_id);
             window.fbq('track', 'PageView');
-            window.__aureonPixelPagePath = window.location.pathname;
+            window.__arhamPixelPagePath = window.location.pathname;
           }
         }
         
@@ -231,18 +224,12 @@ function App() {
             <Route path="/admin/layout" element={adminAuth ? <AdminLayout setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
             <Route path="/admin/sections" element={adminAuth ? <AdminSections setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
             <Route path="/admin/settings" element={adminAuth ? <AdminSettings setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
-            <Route path="/admin/seo" element={adminAuth ? <AdminSEO setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
+
             <Route path="/admin/users" element={adminAuth ? <AdminUsers setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
             <Route path="/admin/customers" element={adminAuth ? <AdminCustomers setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
             <Route path="/admin/policies" element={adminAuth ? <AdminPolicies setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
             <Route path="/admin/pages" element={adminAuth ? <AdminPages setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
             <Route path="/admin/messages" element={adminAuth ? <AdminMessages setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
-            <Route path="/admin/marketing" element={adminAuth ? <AdminMarketing setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
-            <Route path="/admin/traffic-monitor" element={adminAuth ? <AdminTrafficMonitor setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
-            <Route path="/admin/roles" element={adminAuth ? <AdminRoles setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
-            <Route path="/admin/integrations" element={adminAuth ? <AdminIntegrations setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
-            <Route path="/admin/audit-logs" element={adminAuth ? <AdminAuditLogs setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
-            <Route path="/admin/cpanel" element={adminAuth ? <AdminCPanel setAdminAuth={setAdminAuth} /> : <Navigate to="/admin/login" />} />
           </Routes>
           </Suspense>
           <AnnouncementPopup />

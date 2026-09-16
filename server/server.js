@@ -1,22 +1,112 @@
 require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2/promise');
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('./prisma/dev.db');
+
+// Database Connection Pool Mock for SQLite
+const pool = {
+  query: (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+      if (sql.includes('ON DUPLICATE KEY UPDATE')) {
+         if (sql.includes('settings')) {
+            sql = sql.replace('ON DUPLICATE KEY UPDATE setting_value = ?', 'ON CONFLICT(setting_key) DO UPDATE SET setting_value = ?');
+         } else if (sql.includes('users')) {
+            sql = sql.replace('ON DUPLICATE KEY UPDATE role="Admin", name=VALUES(name), photo_url=VALUES(photo_url)', 'ON CONFLICT(uid) DO UPDATE SET role="Admin", name=excluded.name, photo_url=excluded.photo_url');
+         }
+      }
+      if (sql.includes('INSERT IGNORE')) {
+         sql = sql.replace('INSERT IGNORE', 'INSERT OR IGNORE');
+      }
+
+      // Convert MySQL date functions to SQLite
+      if (sql.includes('CURDATE()')) {
+         sql = sql.replace(/CURDATE\(\)/g, "date('now')");
+      }
+      if (sql.includes('DATE_SUB')) {
+         sql = sql.replace(/DATE_SUB\(date\('now'\),\s*INTERVAL\s*(\d+)\s*DAY\)/g, "date('now', '-$1 days')");
+      }
+      
+      const isSelect = sql.trim().toUpperCase().startsWith('SELECT') || sql.trim().toUpperCase().startsWith('SHOW');
+      
+      if (isSelect) {
+        db.all(sql, params, (err, rows) => {
+          if (err) return reject(err);
+          resolve([rows]);
+        });
+      } else {
+        db.run(sql, params, function(err) {
+          if (err) return reject(err);
+          resolve([{ insertId: this.lastID, affectedRows: this.changes }]);
+        });
+      }
+    });
+  },
+  getConnection: async () => ({
+    query: (...args) => pool.query(...args),
+    release: () => {}
+  })
+};
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const { getAuth } = require('firebase-admin/auth');
-const admin = require('firebase-admin');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { exec } = require('child_process');
 
-// Initialize Firebase Admin without credentials for token verification only
-admin.initializeApp({ projectId: 'aureon-217f3' });
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '153863255352-1j7f1101crbnj52begmg9h2mpcolahot.apps.googleusercontent.com';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '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';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'aureon-super-secret-key-2026-fallback';
+/**
+ * Verify Google Token (Supports both accessToken from GIS OAuth2 and idToken)
+ */
+async function verifyGoogleToken({ accessToken, idToken }) {
+  if (accessToken) {
+    const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`);
+    if (!tokenInfoRes.ok) {
+      throw new Error('Invalid or expired Google access token');
+    }
+    const tokenInfo = await tokenInfoRes.json();
+
+    if (tokenInfo.aud !== GOOGLE_CLIENT_ID && tokenInfo.issued_to !== GOOGLE_CLIENT_ID) {
+      console.warn('Google client ID mismatch:', tokenInfo.aud || tokenInfo.issued_to, 'expected:', GOOGLE_CLIENT_ID);
+    }
+
+    const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!userInfoRes.ok) {
+      throw new Error('Failed to fetch Google user profile');
+    }
+    const profile = await userInfoRes.json();
+    return {
+      uid: profile.sub,
+      email: profile.email,
+      name: profile.name,
+      picture: profile.picture
+    };
+  }
+
+  if (idToken) {
+    const tokenInfoRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+    if (!tokenInfoRes.ok) {
+      throw new Error('Invalid or expired Google ID token');
+    }
+    const payload = await tokenInfoRes.json();
+    return {
+      uid: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      picture: payload.picture
+    };
+  }
+
+  throw new Error('No Google token provided');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || 'arham-super-secret-key-2026-fallback';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -143,7 +233,7 @@ const requireAdmin = async (req, res, next) => {
 
 const requireSuperAdmin = async (req, res, next) => {
   const email = req.user?.email || req.user?.username;
-  if (email !== 'mdtowhid5577@gmail.com') {
+  if (email !== 'mdtowhid5577@gmail.com' && email !== 'iamnabilgamer@gmail.com') {
     return res.status(403).json({ error: 'Super Admin privileges required.' });
   }
 
@@ -260,183 +350,14 @@ const upload = multer({
   }
 });
 
-// Database Connection Pool
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'aureon_user',
-  password: process.env.DB_PASSWORD || 'aureon_pass123!',
-  database: process.env.DB_NAME || 'aureon_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // Setup Initial Tables (Run on boot)
 async function initializeDB() {
   try {
-    const createCategoriesTable = `
-      CREATE TABLE IF NOT EXISTS categories (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        slug VARCHAR(100) UNIQUE NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    const createSubcategoriesTable = `
-      CREATE TABLE IF NOT EXISTS subcategories (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        category_id INT NOT NULL,
-        name VARCHAR(100) NOT NULL,
-        slug VARCHAR(100) UNIQUE NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
-      )
-    `;
-    const createProductsTable = `
-      CREATE TABLE IF NOT EXISTS products (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        price DECIMAL(10,2) NOT NULL,
-        oldPrice DECIMAL(10,2),
-        isSale BOOLEAN DEFAULT false,
-        imageUrl VARCHAR(255),
-        category VARCHAR(100),
-        subcategory VARCHAR(100),
-        sizes JSON,
-        stock INT DEFAULT 0,
-        description TEXT,
-        gallery JSON,
-        specifications JSON,
-        size_chart JSON,
-        tags VARCHAR(255) DEFAULT '',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    const createOrdersTable = `
-      CREATE TABLE IF NOT EXISTS orders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        customer_name VARCHAR(255) NOT NULL,
-        phone VARCHAR(20) NOT NULL,
-        email VARCHAR(255),
-        city VARCHAR(100),
-        postal_code VARCHAR(20),
-        address TEXT NOT NULL,
-        total_amount DECIMAL(10,2) NOT NULL,
-        items_json JSON,
-        status VARCHAR(50) DEFAULT 'Pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    const createUsersTable = `
-      CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        firebase_uid VARCHAR(128) UNIQUE,
-        uid VARCHAR(255) UNIQUE,
-        name VARCHAR(255),
-        email VARCHAR(255) UNIQUE,
-        photo_url TEXT,
-        role VARCHAR(20) DEFAULT 'Customer',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    const createFeaturesTable = `
-      CREATE TABLE IF NOT EXISTS features (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
-        icon VARCHAR(50) NOT NULL,
-        is_active BOOLEAN DEFAULT true,
-        display_order INT DEFAULT 0
-      )
-    `;
-    const createAnnouncementsTable = `
-      CREATE TABLE IF NOT EXISTS announcements (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        type ENUM('banner', 'popup') NOT NULL,
-        message TEXT,
-        link_url VARCHAR(255),
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    const createHeroSlidersTable = `
-      CREATE TABLE IF NOT EXISTS hero_sliders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        image_url VARCHAR(255) NOT NULL,
-        link_url VARCHAR(255),
-        is_active BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    const createVisitsTable = `
-      CREATE TABLE IF NOT EXISTS visits (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        ip_address VARCHAR(45) NOT NULL,
-        visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    const createHomepageSectionsTable = `
-      CREATE TABLE IF NOT EXISTS homepage_sections (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        section_key VARCHAR(50) UNIQUE NOT NULL,
-        title VARCHAR(100) NOT NULL,
-        is_active BOOLEAN DEFAULT true,
-        display_order INT NOT NULL
-      )
-    `;
-    const createSettingsTable = `
-      CREATE TABLE IF NOT EXISTS settings (
-        setting_key VARCHAR(50) PRIMARY KEY,
-        setting_value TEXT
-      )
-    `;
-
-    const createPoliciesTable = `
-      CREATE TABLE IF NOT EXISTS policies (
-        policy_key VARCHAR(50) PRIMARY KEY,
-        title VARCHAR(100) NOT NULL,
-        content LONGTEXT,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `;
-    await pool.query(createCategoriesTable);
-    await pool.query(createSubcategoriesTable);
-    await pool.query(createProductsTable);
-    await pool.query(createOrdersTable);
-    await pool.query(createUsersTable);
-    await pool.query(createFeaturesTable);
-    await pool.query(createAnnouncementsTable);
-    await pool.query(createHeroSlidersTable);
-    await pool.query(createVisitsTable);
-    await pool.query(createHomepageSectionsTable);
-    await pool.query(createSettingsTable);
-    await pool.query(createPoliciesTable);
-
-    try { await pool.query('ALTER TABLE users ADD COLUMN firebase_uid VARCHAR(128) UNIQUE'); } catch {}
-    try { await pool.query('ALTER TABLE users ADD COLUMN uid VARCHAR(255) UNIQUE'); } catch {}
-    try { await pool.query('ALTER TABLE users ADD COLUMN photo_url TEXT'); } catch {}
-    try { await pool.query('ALTER TABLE users MODIFY COLUMN photo_url TEXT'); } catch {}
-    try { await pool.query('ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT "Customer"'); } catch {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN tags VARCHAR(255) DEFAULT ""'); } catch {}
-
-    // Ensure products table has missing columns in case it was created earlier
-    try { await pool.query('ALTER TABLE products ADD COLUMN subcategory VARCHAR(100)'); } catch {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN sizes JSON'); } catch {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN gallery JSON'); } catch {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN slug VARCHAR(255) UNIQUE'); } catch {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN specifications JSON'); } catch {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN size_chart JSON'); } catch {}
-
-    const [productsWithoutSlugs] = await pool.query('SELECT id, title, slug FROM products ORDER BY id ASC');
-    for (const product of productsWithoutSlugs) {
-      if (!product.slug) {
-        const baseSlug = slugify(product.title);
-        const [collision] = await pool.query('SELECT id FROM products WHERE slug = ? AND id <> ? LIMIT 1', [baseSlug, product.id]);
-        const finalSlug = collision.length ? `${baseSlug}-${product.id}` : baseSlug;
-        await pool.query('UPDATE products SET slug = ? WHERE id = ?', [finalSlug, product.id]);
-      }
-    }
-
+    console.log('Database connected successfully (SQLite).');
+    
     // Seed default homepage sections if empty
     const [sections] = await pool.query('SELECT COUNT(*) as count FROM homepage_sections');
     if (sections[0].count === 0) {
@@ -447,38 +368,28 @@ async function initializeDB() {
         ['features', 'FEATURES', 1, 4]
       ];
       for (const sec of defaultSections) {
-        await pool.query('INSERT INTO homepage_sections (section_key, title, is_active, display_order) VALUES (?, ?, ?, ?)', sec);
+        await pool.query('INSERT OR IGNORE INTO homepage_sections (section_key, title, is_active, display_order) VALUES (?, ?, ?, ?)', sec);
       }
     }
 
-    // Seed default settings if empty
-    const [settings] = await pool.query('SELECT COUNT(*) as count FROM settings');
-    if (settings[0].count === 0) {
-      const defaultSettings = [
-        ['delivery_dhaka', '60'],
-        ['delivery_outside', '120'],
-        ['social_fb', '#'],
-        ['social_ig', '#'],
-        ['social_tt', '#'],
-        ['social_yt', '#'],
-        ['social_x', '#']
-      ];
-      for (const st of defaultSettings) {
-        await pool.query('INSERT INTO settings (setting_key, setting_value) VALUES (?, ?)', st);
-      }
-    }
-    
-    // Migrations to add missing settings safely
+    // Seed default settings
     const defaultNewSettings = [
+      ['delivery_dhaka', '60'],
+      ['delivery_outside', '120'],
+      ['social_fb', '#'],
+      ['social_ig', '#'],
+      ['social_tt', '#'],
+      ['social_yt', '#'],
+      ['social_x', '#'],
       ['logo_url', ''],
       ['favicon_url', ''],
       ['hotline', '+880 9611 707982'],
       ['whatsapp_number', '+880 1410 954642'],
-      ['contact_email', 'fashion.aureon@gmail.com'],
-      ['seo_title', 'AUREON | Modern Fashion & Lifestyle'],
-      ['seo_description', 'Discover timeless fashion, premium essentials and modern lifestyle products from AUREON.'],
-      ['seo_keywords', 'fashion, clothing, lifestyle, online fashion Bangladesh'],
-      ['seo_author', 'AUREON'],
+      ['contact_email', 'support@arhamclothing.com'],
+      ['seo_title', 'Arham Clothing | Everyday Essentials'],
+      ['seo_description', 'Discover refined everyday essentials from Arham Clothing.'],
+      ['seo_keywords', 'fashion, clothing, lifestyle, online fashion Bangladesh, Arham Clothing'],
+      ['seo_author', 'Arham Clothing'],
       ['seo_canonical_url', ''],
       ['seo_robots', 'index,follow'],
       ['seo_og_title', ''],
@@ -491,10 +402,10 @@ async function initializeDB() {
       ['gsc_dns_record', '']
     ];
     for (const st of defaultNewSettings) {
-      try { await pool.query('INSERT IGNORE INTO settings (setting_key, setting_value) VALUES (?, ?)', st); } catch {}
+      try { await pool.query('INSERT OR IGNORE INTO settings (setting_key, setting_value) VALUES (?, ?)', st); } catch {}
     }
 
-    // Seed default policies if empty
+    // Seed default policies
     const [policiesCount] = await pool.query('SELECT COUNT(*) as count FROM policies');
     if (policiesCount[0].count === 0) {
       const defaultPolicies = [
@@ -503,115 +414,28 @@ async function initializeDB() {
         ['terms-of-service', 'Terms of Service', '<p>Your terms of service here.</p>']
       ];
       for (const p of defaultPolicies) {
-        await pool.query('INSERT INTO policies (policy_key, title, content) VALUES (?, ?, ?)', p);
+        await pool.query('INSERT OR IGNORE INTO policies (policy_key, title, content) VALUES (?, ?, ?)', p);
       }
     }
 
-    // Migrations to add new columns safely
-    const alterProducts = `
-      ALTER TABLE products 
-      ADD COLUMN stock INT DEFAULT 0,
-      ADD COLUMN description TEXT,
-      ADD COLUMN subcategory VARCHAR(100),
-      ADD COLUMN sizes JSON,
-      ADD COLUMN gallery JSON
-    `;
-    try { await pool.query(alterProducts); console.log('Added stock, description, subcategory, sizes to products'); } catch { /* Ignore if columns already exist */ }
-    
-    const alterOrders = `
-      ALTER TABLE orders
-      ADD COLUMN email VARCHAR(255),
-      ADD COLUMN city VARCHAR(100),
-      ADD COLUMN postal_code VARCHAR(20)
-    `;
-    try { await pool.query(alterOrders); console.log('Added email, city, postal_code to orders'); } catch { /* Ignore if columns already exist */ }
-    
-    const alterAnnouncements = `
-      ALTER TABLE announcements
-      ADD COLUMN image_url VARCHAR(255)
-    `;
-    try { await pool.query(alterAnnouncements); console.log('Added image_url to announcements'); } catch { /* Ignore */ }
-
-    const alterUsersProfile = `
-      ALTER TABLE users
-      ADD COLUMN phone VARCHAR(20),
-      ADD COLUMN address TEXT
-    `;
-    try { await pool.query(alterUsersProfile); console.log('Added phone and address to users'); } catch { /* Ignore */ }
-
-    const alterOrdersUser = `
-      ALTER TABLE orders
-      ADD COLUMN user_id INT,
-      ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-    `;
-    try { await pool.query(alterOrdersUser); console.log('Added user_id to orders'); } catch { /* Ignore */ }
-
-    const alterOrdersTracking = `
-      ALTER TABLE orders
-      ADD COLUMN tracking_id VARCHAR(100)
-    `;
-    try { await pool.query(alterOrdersTracking); console.log('Added tracking_id to orders'); } catch { /* Ignore */ }
-
-    const createContactMessagesTable = `
-      CREATE TABLE IF NOT EXISTS contact_messages (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        subject VARCHAR(255),
-        message TEXT NOT NULL,
-        status VARCHAR(50) DEFAULT 'Unread',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    await pool.query(createContactMessagesTable);
-
-    const createSubscribersTable = `
-      CREATE TABLE IF NOT EXISTS subscribers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    await pool.query(createSubscribersTable);
-
-    const createPagesTable = `
-      CREATE TABLE IF NOT EXISTS pages (
-        page_key VARCHAR(50) PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
-        is_active BOOLEAN DEFAULT true
-      )
-    `;
-    await pool.query(createPagesTable);
-    try { await pool.query('ALTER TABLE pages ADD COLUMN is_active BOOLEAN DEFAULT true'); } catch {}
-
-    const createAuditLogsTable = `
-      CREATE TABLE IF NOT EXISTS audit_logs (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        admin_username VARCHAR(255) NOT NULL,
-        action_type VARCHAR(10) NOT NULL,
-        endpoint VARCHAR(255) NOT NULL,
-        ip_address VARCHAR(50),
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-    await pool.query(createAuditLogsTable);
-
     // Seed default pages
-    const defaultPages = [
-      ['stores', 'OUR STORES', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">We are currently operating exclusively online to bring you the best prices and nationwide delivery. Physical flagship stores in Dhaka are coming soon! Stay tuned to our social media for updates.</p>'],
-      ['corporate', 'CORPORATE ORDERS', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto 24px auto;">Elevate your corporate gifting and team apparel with AUREON. We offer bulk purchasing options, custom branding, and premium quality garments tailored for your organization.</p><div style="background: #f8f9fa; padding: 24px; border-radius: 8px; border: 1px solid #eaeaea; display: inline-block;"><p style="font-weight: bold; margin: 0 0 8px 0; font-size: 14px; text-transform: uppercase;">For Corporate Inquiries</p><a href="mailto:corporate@aureonbd.com" style="font-size: 18px; color: #111; text-decoration: underline; font-weight: 600;">corporate@aureonbd.com</a></div>'],
-      ['careers', 'CAREERS AT AUREON', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto 32px auto;">We are always on the lookout for passionate, creative, and driven individuals to join our growing team. Currently, we do not have any open positions, but we\'d love to keep your resume on file for future opportunities.</p><div style="background: #f8f9fa; padding: 24px; border-radius: 8px; border: 1px solid #eaeaea; display: inline-block;"><p style="font-weight: bold; margin: 0 0 8px 0; font-size: 14px; text-transform: uppercase;">Drop Your Resume At</p><a href="mailto:careers@aureonbd.com" style="font-size: 18px; color: #111; text-decoration: underline; font-weight: 600;">careers@aureonbd.com</a></div>'],
-      ['about', 'OUR STORY', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Welcome to AUREON, where premium fashion meets everyday comfort. Born in Bangladesh and built for the world, we believe that style should never come at the expense of quality. Our journey started with a simple idea: to create minimalist, high-quality apparel that empowers individuals to look and feel their best.</p>'],
-      ['contact', 'CONTACT US', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Have questions? We\'re here to help. Reach out to us through any of the channels below.</p>'],
-      ['faq', 'FREQUENTLY ASKED QUESTIONS', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Find answers to common questions about our products, orders, and delivery below.</p>'],
-      ['blog', 'OUR BLOG', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Coming soon. Stay tuned for style tips, brand news, and behind-the-scenes content.</p>']
-    ];
-    for (const p of defaultPages) {
-      await pool.query('INSERT IGNORE INTO pages (page_key, title, content) VALUES (?, ?, ?)', p);
+    const [pagesCount] = await pool.query('SELECT COUNT(*) as count FROM pages');
+    if (pagesCount[0].count === 0) {
+      const defaultPages = [
+        ['stores', 'OUR STORES', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">We are currently operating exclusively online to bring you the best prices and nationwide delivery. Physical flagship stores in Dhaka are coming soon! Stay tuned to our social media for updates.</p>'],
+        ['corporate', 'CORPORATE ORDERS', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto 24px auto;">Elevate your corporate gifting and team apparel with ARHAM CLOTHING. We offer bulk purchasing options, custom branding, and premium quality garments tailored for your organization.</p><div style="background: #f8f9fa; padding: 24px; border-radius: 8px; border: 1px solid #eaeaea; display: inline-block;"><p style="font-weight: bold; margin: 0 0 8px 0; font-size: 14px; text-transform: uppercase;">For Corporate Inquiries</p><a href="mailto:corporate@arhamclothing.com" style="font-size: 18px; color: #111; text-decoration: underline; font-weight: 600;">corporate@arhamclothing.com</a></div>'],
+        ['careers', 'CAREERS AT ARHAM CLOTHING', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto 32px auto;">We are always on the lookout for passionate, creative, and driven individuals to join our growing team. Currently, we do not have any open positions, but we\'d love to keep your resume on file for future opportunities.</p><div style="background: #f8f9fa; padding: 24px; border-radius: 8px; border: 1px solid #eaeaea; display: inline-block;"><p style="font-weight: bold; margin: 0 0 8px 0; font-size: 14px; text-transform: uppercase;">Drop Your Resume At</p><a href="mailto:careers@arhamclothing.com" style="font-size: 18px; color: #111; text-decoration: underline; font-weight: 600;">careers@arhamclothing.com</a></div>'],
+        ['about', 'OUR STORY', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Welcome to ARHAM CLOTHING, where premium fashion meets everyday comfort. Born in Bangladesh and built for the world, we believe that style should never come at the expense of quality. Our journey started with a simple idea: to create minimalist, high-quality apparel that empowers individuals to look and feel their best.</p>'],
+        ['contact', 'CONTACT US', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Have questions? We\'re here to help. Reach out to us through any of the channels below.</p>'],
+        ['faq', 'FREQUENTLY ASKED QUESTIONS', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Find answers to common questions about our products, orders, and delivery below.</p>'],
+        ['blog', 'OUR BLOG', '<p style="color: #666; max-width: 600px; font-size: 16px; line-height: 1.6; margin: 0 auto;">Coming soon. Stay tuned for style tips, brand news, and behind-the-scenes content.</p>']
+      ];
+      for (const p of defaultPages) {
+        await pool.query('INSERT OR IGNORE INTO pages (page_key, title, content) VALUES (?, ?, ?)', p);
+      }
     }
 
-    console.log('✅ Database tables initialized successfully');
+    console.log('✅ Database seeds verified successfully');
   } catch (error) {
     console.error('❌ Database init failed:', error);
   }
@@ -1379,22 +1203,25 @@ app.put('/api/homepage-sections', authenticateToken, requireAdmin, async (req, r
 
 // Google Login Endpoint (Admin)
 app.post('/api/admin/google-login', loginLimiter, async (req, res) => {
-  const { idToken } = req.body;
-  if (!idToken) return res.status(400).json({ success: false, message: 'Token missing' });
+  const { idToken, accessToken } = req.body;
+  if (!idToken && !accessToken) return res.status(400).json({ success: false, message: 'Token missing' });
 
   try {
-    const decodedToken = await getAuth().verifyIdToken(idToken);
-    const email = decodedToken.email;
+    const googleUser = await verifyGoogleToken({ idToken, accessToken });
+    const email = googleUser.email;
 
     // Check if user is the root admin or has an authorized role
     let isAllowed = false;
     let userRole = 'Customer';
     
-    if (email === 'mdtowhid5577@gmail.com') {
+    if (email === 'mdtowhid5577@gmail.com' || email === 'iamnabilgamer@gmail.com') {
       isAllowed = true;
       userRole = 'Admin';
       // Auto-upsert root admin
-      await pool.query('INSERT IGNORE INTO users (uid, firebase_uid, email, name, photo_url, role) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE role="Admin"', [decodedToken.uid, decodedToken.uid, email, decodedToken.name, decodedToken.picture, 'Admin']);
+      await pool.query(
+        'INSERT INTO users (uid, firebase_uid, email, name, photo_url, role) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE role="Admin", name=VALUES(name), photo_url=VALUES(photo_url)', 
+        [googleUser.uid, googleUser.uid, email, googleUser.name, googleUser.picture, 'Admin']
+      );
     } else {
       const [rows] = await pool.query('SELECT role FROM users WHERE email = ? AND role IN ("Admin", "Manager", "Editor")', [email]);
       if (rows.length > 0) {
@@ -1411,7 +1238,7 @@ app.post('/api/admin/google-login', loginLimiter, async (req, res) => {
     res.json({ success: true, token, email, role: userRole });
   } catch (error) {
     console.error('Admin login error:', error);
-    res.status(500).json({ success: false, message: 'Server error during Google login' });
+    res.status(500).json({ success: false, message: 'Server error during Google login: ' + error.message });
   }
 });
 
@@ -1432,7 +1259,7 @@ const getPublicSiteUrl = async () => {
   const [rows] = await pool.query('SELECT setting_value FROM settings WHERE setting_key = ?', ['seo_canonical_url']);
   const configured = rows[0]?.setting_value?.trim();
   const isLocalUrl = configured && /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?/i.test(configured);
-  const fallbackSiteUrl = process.env.PUBLIC_SITE_URL || 'https://aureonbd.com';
+  const fallbackSiteUrl = process.env.PUBLIC_SITE_URL || 'https://arhamclothing.com';
   return ((configured && !isLocalUrl) ? configured : fallbackSiteUrl).replace(/\/$/, '');
 };
 
@@ -1580,22 +1407,26 @@ app.put('/api/admin/pages/:key', authenticateToken, requireAdmin, async (req, re
 });
 
 // User Login Endpoint (Frontend)
-app.post('/api/user/login', loginLimiter, async (req, res) => {
-  const { idToken } = req.body;
-  if (!idToken) return res.status(400).json({ success: false, message: 'Token missing' });
+app.post('/api/user/login', async (req, res) => {
+  const { idToken, accessToken } = req.body;
+  if (!idToken && !accessToken) return res.status(400).json({ success: false, message: 'Token missing' });
 
   try {
-    const decodedToken = await getAuth().verifyIdToken(idToken);
-    const { uid, email, name, picture: photo_url } = decodedToken;
+    const googleUser = await verifyGoogleToken({ idToken, accessToken });
+    const { uid, email, name, picture: photo_url } = googleUser;
     
-    // Upsert user in database
-    const [existingUser] = await pool.query('SELECT * FROM users WHERE firebase_uid = ?', [uid]);
+    // Upsert user in database (check by uid, firebase_uid, or email)
+    const [existingUser] = await pool.query('SELECT * FROM users WHERE uid = ? OR firebase_uid = ? OR email = ?', [uid, uid, email]);
     let userId;
     let userRole = 'Customer';
+    let phone = null;
+    let address = null;
     
     if (existingUser.length > 0) {
       userId = existingUser[0].id;
       userRole = existingUser[0].role;
+      phone = existingUser[0].phone;
+      address = existingUser[0].address;
       await pool.query('UPDATE users SET email=?, name=?, photo_url=?, uid=? WHERE id=?', [email || null, name || null, photo_url || null, uid, userId]);
     } else {
       const [result] = await pool.query('INSERT INTO users (uid, firebase_uid, email, name, photo_url, role) VALUES (?, ?, ?, ?, ?, ?)', [uid, uid, email || null, name || null, photo_url || null, 'Customer']);
@@ -1606,7 +1437,7 @@ app.post('/api/user/login', loginLimiter, async (req, res) => {
     res.json({ 
       success: true, 
       token, 
-      user: { id: userId, uid, email, name, photo_url, role: userRole, phone: existingUser[0]?.phone, address: existingUser[0]?.address } 
+      user: { id: userId, uid, email, name, photo_url, role: userRole, phone, address } 
     });
   } catch (error) {
     console.error('USER LOGIN ERROR:', error);

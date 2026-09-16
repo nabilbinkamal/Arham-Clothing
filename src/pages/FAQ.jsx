@@ -48,25 +48,13 @@ const FAQ = () => {
     return <div className="page-wrapper" style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
   }
 
-  if (!page || page.error) {
-    return (
-      <div className="page-wrapper" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '60px 20px' }}>
-        <div style={{ textAlign: 'center', maxWidth: '500px' }}>
-          <h1 style={{ fontSize: '28px', fontWeight: '800', marginBottom: '16px', color: '#111' }}>PAGE UNAVAILABLE</h1>
-          <p style={{ color: '#666', lineHeight: '1.6', marginBottom: '24px' }}>This page is currently disabled.</p>
-          <a href="/" style={{ display: 'inline-block', background: '#111', color: 'white', padding: '12px 32px', textDecoration: 'none', fontWeight: '700', borderRadius: '4px' }}>RETURN TO HOMEPAGE</a>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="page-wrapper">
       <div className="page-header">
-        <h1 className="page-title">{page.title || 'FREQUENTLY ASKED QUESTIONS'}</h1>
+        <h1 className="page-title">{page?.title || 'FREQUENTLY ASKED QUESTIONS'}</h1>
         <div 
           style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-          dangerouslySetInnerHTML={{ __html: page.content }} 
+          dangerouslySetInnerHTML={{ __html: page?.content || '' }} 
         />
       </div>
 
