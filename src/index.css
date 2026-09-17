@@ -105,3 +105,115 @@
   color: #111 !important;
 }
 
+/* Footer Bottom Fix */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+main {
+  flex-grow: 1;
+}
+
+/* Premium Dropdown UI Overrides */
+.profile-dropdown {
+  border: 1px solid #eaeaea !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08) !important;
+  padding: 20px 0 10px !important;
+  min-width: 240px !important;
+  right: -20px !important;
+}
+.profile-dropdown::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 32px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-top: 1px solid #eaeaea;
+  border-left: 1px solid #eaeaea;
+  transform: rotate(45deg);
+}
+.dropdown-item {
+  padding: 12px 24px !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+}
+.dropdown-item:hover {
+  background: #fdfdfd !important;
+  color: #ff3366 !important;
+  transform: translateX(4px);
+}
+.dropdown-divider {
+  margin: 16px 0 8px !important;
+}
+
+/* Product Card Typography Overrides */
+.arham-product-info {
+  padding-top: 14px !important;
+}
+.arham-product-name {
+  font-size: 16px !important;
+  margin-bottom: 8px !important;
+  font-weight: 600 !important;
+  color: #111 !important;
+}
+.arham-product-price {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #111 !important;
+}
+.arham-size-picker {
+  margin-top: 6px !important;
+  gap: 8px !important;
+}
+.arham-size-picker button {
+  min-width: 32px !important;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+.arham-add-button {
+  font-size: 14px !important;
+  padding: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Product Image Sizing Overrides */
+.arham-product-card {
+  max-width: 100% !important;
+}
+.arham-product-image-wrap {
+  aspect-ratio: 3/4 !important; /* Taller aspect ratio for clothing */
+}
+
+/* Responsive Grid Fixes - Explicit Column Counts */
+.arham-products-grid, .products-grid {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+
+@media (max-width: 1280px) {
+  .arham-products-grid, .products-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 992px) {
+  .arham-products-grid, .products-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .arham-collection {
+    grid-template-columns: 1fr !important;
+    gap: 32px !important;
+  }
+  .arham-collection-intro {
+    max-width: 100% !important;
+    text-align: center !important;
+  }
+  .arham-collection-intro h2 {
+    max-width: 100% !important;
+  }
+}

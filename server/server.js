@@ -636,7 +636,7 @@ app.delete('/api/categories/:id', authenticateToken, requireAdmin, async (req, r
   }
 });
 
-// Subcategories API
+// Subcategories API (legacy - kept for backward compat)
 app.get('/api/subcategories', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM subcategories ORDER BY name ASC');
@@ -660,6 +660,69 @@ app.delete('/api/subcategories/:id', authenticateToken, requireAdmin, async (req
   try {
     await pool.query('DELETE FROM subcategories WHERE id = ?', [req.params.id]);
     res.json({ message: 'Subcategory deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Menu Items API (3-level category system) ──
+// Create table if not exists
+db.run(`CREATE TABLE IF NOT EXISTS menu_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  main_category TEXT NOT NULL,
+  sub_category TEXT NOT NULL,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  display_order INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+
+// GET all menu items
+app.get('/api/menu-items', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM menu_items ORDER BY main_category, sub_category, display_order, name ASC');
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET menu items grouped for mega menu
+app.get('/api/menu-structure', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM menu_items ORDER BY main_category, sub_category, display_order, name ASC');
+    // Group by main_category -> sub_category
+    const structure = {};
+    rows.forEach(item => {
+      if (!structure[item.main_category]) structure[item.main_category] = {};
+      if (!structure[item.main_category][item.sub_category]) structure[item.main_category][item.sub_category] = [];
+      structure[item.main_category][item.sub_category].push({ id: item.id, name: item.name, slug: item.slug });
+    });
+    res.json(structure);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST new menu item
+app.post('/api/menu-items', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { main_category, sub_category, name, slug, display_order } = req.body;
+    const [result] = await pool.query(
+      'INSERT INTO menu_items (main_category, sub_category, name, slug, display_order) VALUES (?, ?, ?, ?, ?)',
+      [main_category, sub_category, name, slug, display_order || 0]
+    );
+    res.status(201).json({ id: result.insertId, message: 'Menu item created' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE menu item
+app.delete('/api/menu-items/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM menu_items WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Menu item deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

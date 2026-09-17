@@ -285,24 +285,39 @@ const AdminSettings = () => {
           
           <div className="admin-grid-2">
             <div>
-              <label style={labelStyle}>Facebook URL</label>
-              <input type="text" name="social_fb" value={settings.social_fb} onChange={handleChange} style={inputStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: 0 }}>Facebook</label>
+                <ToggleSwitch checked={settings.social_fb_active === '1'} onChange={(c) => setSettings({...settings, social_fb_active: c ? '1' : '0'})} />
+              </div>
+              <input type="text" name="social_fb" value={settings.social_fb || ''} onChange={handleChange} style={inputStyle} placeholder="URL" />
             </div>
             <div>
-              <label style={labelStyle}>Instagram URL</label>
-              <input type="text" name="social_ig" value={settings.social_ig} onChange={handleChange} style={inputStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: 0 }}>Instagram</label>
+                <ToggleSwitch checked={settings.social_ig_active === '1'} onChange={(c) => setSettings({...settings, social_ig_active: c ? '1' : '0'})} />
+              </div>
+              <input type="text" name="social_ig" value={settings.social_ig || ''} onChange={handleChange} style={inputStyle} placeholder="URL" />
             </div>
             <div>
-              <label style={labelStyle}>TikTok URL</label>
-              <input type="text" name="social_tt" value={settings.social_tt} onChange={handleChange} style={inputStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: 0 }}>TikTok</label>
+                <ToggleSwitch checked={settings.social_tt_active === '1'} onChange={(c) => setSettings({...settings, social_tt_active: c ? '1' : '0'})} />
+              </div>
+              <input type="text" name="social_tt" value={settings.social_tt || ''} onChange={handleChange} style={inputStyle} placeholder="URL" />
             </div>
             <div>
-              <label style={labelStyle}>YouTube URL</label>
-              <input type="text" name="social_yt" value={settings.social_yt} onChange={handleChange} style={inputStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: 0 }}>YouTube</label>
+                <ToggleSwitch checked={settings.social_yt_active === '1'} onChange={(c) => setSettings({...settings, social_yt_active: c ? '1' : '0'})} />
+              </div>
+              <input type="text" name="social_yt" value={settings.social_yt || ''} onChange={handleChange} style={inputStyle} placeholder="URL" />
             </div>
             <div>
-              <label style={labelStyle}>X (Twitter) URL</label>
-              <input type="text" name="social_x" value={settings.social_x} onChange={handleChange} style={inputStyle} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: 0 }}>X (Twitter)</label>
+                <ToggleSwitch checked={settings.social_x_active === '1'} onChange={(c) => setSettings({...settings, social_x_active: c ? '1' : '0'})} />
+              </div>
+              <input type="text" name="social_x" value={settings.social_x || ''} onChange={handleChange} style={inputStyle} placeholder="URL" />
             </div>
           </div>
         </div>

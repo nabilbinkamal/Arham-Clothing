@@ -9,17 +9,13 @@ const Logo = ({ color = "currentColor", size = 28 }) => {
     }
   } catch {}
 
-  if (logoUrl) {
-    return (
-      <img 
-        src={logoUrl} 
-        alt="Arham Clothing"
-        style={{ height: `${size + 10}px`, objectFit: 'contain' }} 
-      />
-    );
-  }
-
-  return <span className="arham-wordmark" style={{ color, fontSize: `${size}px` }}>ARHAM</span>;
+  return (
+    <img 
+      src={logoUrl || "/logo.png"} 
+      alt="Arham Clothing"
+      style={{ height: `${size + 15}px`, objectFit: 'contain' }} 
+    />
+  );
 };
 
 export default Logo;

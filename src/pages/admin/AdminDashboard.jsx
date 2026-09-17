@@ -32,7 +32,9 @@ const AdminLayout = ({ children, setAdminAuth }) => {
       {/* Sidebar */}
       <div className="admin-sidebar" style={{ width: '250px', background: '#111', color: 'white', padding: '24px 0', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '0 24px', marginBottom: '40px' }}>
-          <Logo color="white" size={20} />
+          <Link to="/" style={{ textDecoration: 'none', display: 'block' }}>
+            <Logo color="white" size={20} />
+          </Link>
           <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', letterSpacing: '1px', display: 'block', marginTop: '8px' }}>Admin Panel</span>
         </div>
         
@@ -87,21 +89,6 @@ const AdminLayout = ({ children, setAdminAuth }) => {
                 <li>
                   <Link to="/admin/announcements" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/announcements' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/announcements' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
                     <Megaphone size={18} /> Announcements
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/sections" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/sections' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/sections' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <LayoutDashboard size={18} /> Layout
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/pages" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/pages' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/pages' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <FileOutput size={18} /> Pages
-                  </Link>
-                </li>
-                <li>
-                  <Link to="/admin/policies" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: location.pathname === '/admin/policies' ? 'white' : '#999', textDecoration: 'none', padding: '10px 16px', borderRadius: '8px', background: location.pathname === '/admin/policies' ? '#333' : 'transparent', transition: 'all 0.2s', fontSize: '14px' }}>
-                    <FileText size={18} /> Policies
                   </Link>
                 </li>
               </>

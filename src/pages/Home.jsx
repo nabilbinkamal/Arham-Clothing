@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import HeroBanner from '../components/HeroBanner';
 import CategoryGrid from '../components/CategoryGrid';
+import ProductCard from '../components/ProductCard';
 
 const sampleProducts = [
   { id: 'arham-essential-white', title: 'Essential Tee', price: 1350, imageUrl: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=700&q=85', category: 't-shirts', colors: ['#fff', '#222'] },
@@ -47,26 +48,7 @@ const Home = () => {
         </div>
         <div className="arham-products-grid">
           {(newest.length ? newest : sampleProducts).map(p => (
-            <article key={p.id} className="arham-product-card">
-              <div className="arham-product-image-wrap">
-                <Link to={`/product/${p.slug || p.id}`}>
-                  <img src={p.imageUrl} alt={p.title} loading="lazy" />
-                </Link>
-                <button className="arham-product-wishlist" aria-label="Add to wishlist">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                </button>
-              </div>
-              <div className="arham-product-info">
-                <Link to={`/product/${p.slug || p.id}`} className="arham-product-name">{p.title}</Link>
-                <p className="arham-product-price">৳ {Number(p.price).toLocaleString('en-BD')}</p>
-                <div className="arham-size-picker">
-                  {['S', 'M', 'L', 'XL', 'XXL'].map((size, i) => (
-                    <button key={size} className={i === 1 ? 'selected' : ''}>{size}</button>
-                  ))}
-                </div>
-                <button className="arham-button arham-add-button" style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}>ADD TO CART</button>
-              </div>
-            </article>
+            <ProductCard key={p.id} product={p} />
           ))}
         </div>
       </section>

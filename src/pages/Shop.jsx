@@ -97,7 +97,7 @@ const Shop = () => {
   return (
     <>
       <Header cartCount={0} />
-      <main style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
+      <main style={{ width: '100%', padding: '40px 5vw', maxWidth: '1480px', margin: '0 auto' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '32px', textAlign: 'center', textTransform: 'uppercase' }}>
           {customTitle || (searchQuery ? `Search: ${searchParams.get('search')}` : selectedCat ? selectedCat : 'Shop Our Collection')}
         </h1>
